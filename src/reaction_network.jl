@@ -365,7 +365,7 @@ function make_reaction_system(ex::Expr; name = :(gensym(:ReactionSystem)))
     variables = extract_syms(options, :variables)
 
     # Handles a (potential) noise scaling parameter.
-    #nosie_scaling_p_args = handle_noise_scaling_ps!(parameters_declared, options)
+    #noise_scaling_p_args = handle_noise_scaling_ps!(parameters_declared, options)
 
     # handle independent variables
     if haskey(options, :ivs)
@@ -407,8 +407,8 @@ function make_reaction_system(ex::Expr; name = :(gensym(:ReactionSystem)))
         push!(rxexprs.args, get_rxexprs(reaction))
     end
 
-    # Adds potentital nosie scaling parameters.
-    #append!(ps.args, nosie_scaling_p_args)
+    # Adds potentital noise scaling parameters.
+    #append!(ps.args, noise_scaling_p_args)
     
     # Returns the rephrased expression.
     quote
@@ -540,7 +540,7 @@ function get_pexpr(parameters_extracted, options)
     append!(pexprs.args, get_noise_scaling_pexpr(options))
     pexprs
 end
-# Extracts any decalred nosie scaling parameters.
+# Extracts any decalred noise scaling parameters.
 function get_noise_scaling_pexpr(options)
     haskey(options, :noise_scaling_parameters) || return []
     ns_expr = options[:noise_scaling_parameters]
