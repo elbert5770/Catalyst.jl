@@ -153,6 +153,7 @@ macro species(ex...)
     # put back the vector of the new species symbols
     vars.args[idx] = lastarg
 
+    println(vars)
     esc(vars)
 end
 
@@ -364,6 +365,9 @@ function make_reaction_system(ex::Expr; name = :(gensym(:ReactionSystem)))
     parameters_declared = extract_syms(options, :parameters)
     variables = extract_syms(options, :variables)
 
+    # Handles noise scaling parameters.
+    noise_scaling_pexpr = handle_noise_scaling_parameters!(parameters_declared, options)
+
     # handle independent variables
     if haskey(options, :ivs)
         ivs = Tuple(extract_syms(options, :ivs))
@@ -396,6 +400,7 @@ function make_reaction_system(ex::Expr; name = :(gensym(:ReactionSystem)))
     sexprs = get_sexpr(species_extracted, options; iv_symbols = ivs)
     vexprs = haskey(options, :variables) ? options[:variables] : :()
     pexprs = get_pexpr(parameters_extracted, options)
+    ns_ps, ns_pssym = scalarize_macro(haskey(options, :noise_scaling_parameters), noise_scaling_pexpr, "ns_ps")
     ps, pssym = scalarize_macro(!isempty(parameters), pexprs, "ps")
     vars, varssym = scalarize_macro(!isempty(variables), vexprs, "vars")
     sps, spssym = scalarize_macro(!isempty(species), sexprs, "specs")
@@ -404,17 +409,20 @@ function make_reaction_system(ex::Expr; name = :(gensym(:ReactionSystem)))
         push!(rxexprs.args, get_rxexprs(reaction))
     end
 
-    #append!(ps.args, noise_scaling_p_args)
-    
+    println(ps)
+    println(ns_ps)
+    println(sps)
+
     # Returns the rephrased expression.
     quote
         $ps
+        $ns_ps
         $ivexpr
         $vars
         $sps
 
         Catalyst.make_ReactionSystem_internal($rxexprs, $tiv, union($spssym, $varssym),
-                                              $pssym; name = $name,
+                                              union($pssym, $ns_pssym); name = $name,
                                               spatial_ivs = $sivs)
     end
 end
@@ -533,25 +541,7 @@ function get_pexpr(parameters_extracted, options)
     pexprs = (haskey(options, :parameters) ? options[:parameters] :
               (isempty(parameters_extracted) ? :() : :(@parameters)))
     foreach(p -> push!(pexprs.args, p), parameters_extracted)
-    append!(pexprs.args, get_noise_scaling_pexpr(options))
     pexprs
-end
-# Extracts any decalred noise scaling parameters.
-function get_noise_scaling_pexpr(options)
-    haskey(options, :noise_scaling_parameters) || return []
-    ns_expr = options[:noise_scaling_parameters]
-    for idx = length(ns_expr.args):-1:3
-        if (ns_expr.args[idx] isa Symbol) || # Parameter on form η.
-           (ns_expr.args[idx] isa Expr) && (ns_expr.args[idx].head == :ref) || # Parameter on form η[1:3].
-           (ns_expr.args[idx] isa Expr) && (ns_expr.args[idx].head == :(=)) # Parameter on form η=0.1.
-            if idx < length(ns_expr.args) && (ns_expr.args[idx+1] isa Expr)  && (ns_expr.args[idx+1].head == :vect)
-                push!(ns_expr.args[idx+1].args,:(noisescalingparameter=true))
-            else
-                insert!(ns_expr.args, idx+1, :([noisescalingparameter=true]))
-            end
-        end
-    end
-    return ns_expr.args[3:end]
 end
 
 # Creates the reaction vector declaration statement.
@@ -681,6 +671,47 @@ function recursive_find_reactants!(ex::ExprValues, mult::ExprValues,
         throw("Malformed reaction, bad operator: $(ex.args[1]) found in stochiometry expression $ex.")
     end
     reactants
+end
+
+### Handle Options ###
+
+# macro, similar to @parameters, but all paraemters become noise scaling parameters.
+macro noise_scaling_parameters(ex...)
+    vars = Symbolics._parse_parameters(:parameters, Real, ex)
+
+    # vector of symbols that get defined
+    lastarg = vars.args[end]
+
+    # start adding metadata statements where the vector of symbols was previously declared
+    idx = length(vars.args)
+    resize!(vars.args, idx + length(lastarg.args) + 1)
+    for sym in lastarg.args
+        vars.args[idx] = :($sym = ModelingToolkit.wrap(setmetadata(ModelingToolkit.value($sym),
+                                                                    Catalyst.NoiseScalingParameter,
+                                                                    true)))
+        idx += 1
+    end
+
+    # check nothing was declared isconstantspecies
+    ex = quote end
+    vars.args[idx] = ex
+    idx += 1
+
+    # put back the vector of the new species symbols
+    vars.args[idx] = lastarg
+    println(vars)
+    esc(vars)
+end
+
+# Creates an expression listing any noise scaling parameters (and also return a list of them).
+function handle_noise_scaling_parameters!(parameters_declared, options)
+    haskey(options, :noise_scaling_parameters) || return :()
+
+    noise_scaling_parameters = extract_syms(options, :noise_scaling_parameters)    
+    isempty(intersect(parameters_declared, noise_scaling_parameters)) || error("Parameters: $(intersect(parameters_declared, noise_scaling_parameters_declared)) were declared using both @parameters and @noise_scaling_parameters, please only use one (the later for nosie scaling parameters, else the latter).")
+    append!(parameters_declared, noise_scaling_parameters)
+
+    return options[:noise_scaling_parameters]
 end
 
 ### Functionality for expanding function call to custom and specific functions ###
