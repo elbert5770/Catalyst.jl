@@ -677,7 +677,7 @@ end
 
 # macro, similar to @parameters, but all paraemters become noise scaling parameters.
 macro noise_scaling_parameters(ex...)
-    vars = Symbolics._parse_parameters(:parameters, Real, ex)
+    vars = Symbolics._parse_vars(:parameters, Real, ex)
 
     # vector of symbols that get defined
     lastarg = vars.args[end]
