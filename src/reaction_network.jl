@@ -153,7 +153,6 @@ macro species(ex...)
     # put back the vector of the new species symbols
     vars.args[idx] = lastarg
 
-    println(vars)
     esc(vars)
 end
 
@@ -699,7 +698,6 @@ macro noise_scaling_parameters(ex...)
 
     # put back the vector of the new species symbols
     vars.args[idx] = lastarg
-    
     esc(vars)
 end
 
