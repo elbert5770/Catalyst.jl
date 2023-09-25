@@ -408,10 +408,6 @@ function make_reaction_system(ex::Expr; name = :(gensym(:ReactionSystem)))
         push!(rxexprs.args, get_rxexprs(reaction))
     end
 
-    println(ps)
-    println(ns_ps)
-    println(sps)
-
     # Returns the rephrased expression.
     quote
         $ps
@@ -676,7 +672,7 @@ end
 
 # macro, similar to @parameters, but all paraemters become noise scaling parameters.
 macro noise_scaling_parameters(ex...)
-    vars = Symbolics._parse_vars(:parameters, Real, ex)
+    vars = Symbolics._parse_vars(:parameters, Real, ex, toparam)
 
     # vector of symbols that get defined
     lastarg = vars.args[end]
