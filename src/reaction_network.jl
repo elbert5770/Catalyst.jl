@@ -401,13 +401,13 @@ function make_reaction_system(ex::Expr; name = :(gensym(:ReactionSystem)))
     pexprs = get_pexpr(parameters_extracted, options)
     ns_ps, ns_pssym = scalarize_macro(haskey(options, :noise_scaling_parameters), noise_scaling_pexpr, "ns_ps")
     ps, pssym = scalarize_macro(!isempty(parameters), pexprs, "ps")
+    rs_p_syms = haskey(options, :noise_scaling_parameters) ? :(union($pssym, $ns_pssym)) : pssym
     vars, varssym = scalarize_macro(!isempty(variables), vexprs, "vars")
     sps, spssym = scalarize_macro(!isempty(species), sexprs, "specs")
     rxexprs = :(Catalyst.CatalystEqType[])
     for reaction in reactions
         push!(rxexprs.args, get_rxexprs(reaction))
     end
-
     # Returns the rephrased expression.
     quote
         $ps
@@ -417,7 +417,7 @@ function make_reaction_system(ex::Expr; name = :(gensym(:ReactionSystem)))
         $sps
 
         Catalyst.make_ReactionSystem_internal($rxexprs, $tiv, union($spssym, $varssym),
-                                              union($pssym, $ns_pssym); name = $name,
+                                              $rs_p_syms; name = $name,
                                               spatial_ivs = $sivs)
     end
 end
