@@ -3,6 +3,7 @@
 ## Catalyst unreleased (master branch)
 - Added CatalystStructuralIdentifiabilityExtension, which provides a simple interface for structural identifiablity analysis of reaction rate equation ODE models arising from Catalyst systems via StructuralIdentifiability.jl.
 ```julia
+using Catalyst, StructuralIdentifiability
 goodwind_oscillator = @reaction_network begin
     (mmr(P,pₘ,1), dₘ), 0 <--> M
     (pₑ*M,dₑ), 0 <--> E
