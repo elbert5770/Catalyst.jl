@@ -8,7 +8,8 @@ using SparseArrays, DiffEqBase, Reexport, Setfield
 using LaTeXStrings, Latexify, Requires
 using JumpProcesses: JumpProcesses,
                      JumpProblem, MassActionJump, ConstantRateJump,
-                     VariableRateJump
+                     VariableRateJump,
+                     CartesianGrid, CartesianGridRej
 
 # ModelingToolkit imports and convenience functions we use
 using ModelingToolkit
@@ -123,6 +124,7 @@ export isedgeparameter
 include("spatial_reaction_systems/lattice_reaction_systems.jl")
 export LatticeReactionSystem
 export spatial_species, vertex_parameters, edge_parameters
+export CartesianGrid, CartesianGridReJ # (Implemented in JumpProcesses)
 
 # variosu utility functions
 include("spatial_reaction_systems/utility.jl")
